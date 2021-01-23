@@ -1,4 +1,5 @@
 import numpy as np
+from astropy.time import Time
 
 txt_file_path = './'
 input_name = 'tg_20210120T01h00m30s.txt'
@@ -47,10 +48,20 @@ def structure_check(txt_content):
         if n != 1:
             return False
 
+    for i in range(len(txt_content) - 1):
+        time_index = 1
+        if txt_content[i][time_index] == txt_content[i + 1][time_index]:
+            return False
+
     return True
 
 
 structure_bool = structure_check(txt_contents)
 print(structure_bool)
 
-# print(np.array(txt_contents))
+
+def orbit_identification(txt_content):
+    
+    return 0
+
+print(np.array(txt_contents))
