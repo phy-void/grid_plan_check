@@ -18,6 +18,7 @@ time = [a, b]
 time1 = Time(time, format='iso')
 print((time1[1].unix-time1[0].unix)==60)
 '''
+'''
 txt_file_path = './'
 input_name = 'tg_20210120T01h00m30s.txt'
 txt_file_name = txt_file_path + input_name
@@ -44,3 +45,4 @@ for line in txt_contents:
 print(txt_contents[5][2]== 'load_bin_file tg_PowerOnM.bin')
 print(txt_contents[5][2].rstrip('\x00')=='load_bin_file tg_PowerOnM.bin')
 print('load_bin_file tg_PowerOnM.bin'=='load_bin_file tg_PowerOnM.bin')
+'''

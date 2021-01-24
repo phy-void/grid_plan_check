@@ -48,7 +48,7 @@ def structure_check(txt_content):
             pass
         if n != 1:
             return False
-
+    # check repeated time
     for i in range(len(txt_content) - 1):
         time_index = 1
         if txt_content[i][time_index] == txt_content[i + 1][time_index]:
@@ -58,36 +58,64 @@ def structure_check(txt_content):
 
 
 structure_bool = structure_check(txt_contents)
-print(structure_bool)
+print('structure: ', structure_bool)
+print('checking orbit time sequence...')
 
-
-def orbit_identification(txt_content):
-    orbit_start_time = []
-    observe_off_time = []
+def orbit_recognition(txt_content):
+    power_on_time = []
+    data_on_time = []
     data_off_time = []
     attitude_quaternion = []
+    attitude_command_time = []
     for line in txt_content:
         if line[2] == 'load_bin_file tg_PowerOnM.bin' or line[2] == 'load_bin_file tg_PowerOn.bin':
-            orbit_start_time.append(line[1])
+            power_on_time.append(line[1])
         if line[2] == 'load_bin_file tg_TXDataOn.bin':
-            observe_off_time.append(line[1])
+            data_on_time.append(line[1])
             line_index = txt_content.index(line)
             next_line = txt_content[line_index + 1][2].split(' ')
             if next_line[0] == 'upload_quaternion':
                 attitude_quaternion.append([float(next_line[1]), float(next_line[2]), float(next_line[3])])
+                # check attitude command structure
+                if txt_content[line_index + 2][2] == 'set_inertial_pointing_mode' \
+                        and txt_content[line_index + 3][2] == 'start_inertial_pointing':
+                    attitude_command_time.append(txt_content[line_index + 3][1])
+                else:
+                    return 'attitude command structure Error'
             else:
                 attitude_quaternion.append([None, None, None])
+                attitude_command_time.append(None)
         if line[2] == 'load_bin_file tg_TXDataOff.bin':
             data_off_time.append(line[1])
 
-
-    return orbit_start_time, observe_off_time, data_off_time, attitude_quaternion
-
-
-#print(np.array(txt_contents))
-orbit_start_time, observe_off_time, data_off_time, attitude_quaternion=orbit_identification(txt_contents)
-print(len(orbit_start_time))
-print(len(observe_off_time))
-print(np.shape(attitude_quaternion))
+    return power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time
 
 
+power_on_time, data_on_time, data_off_time, attitude_quaternion, \
+attitude_command_time = orbit_recognition(txt_contents)
+
+
+def time_interval_check(power_on_time, data_off_time, attitude_command_time):
+    total_orbit_number1 = len(power_on_time)
+
+    power_on_time = Time(power_on_time, format='iso')
+    data_off_time = Time(data_off_time, format='iso')
+    for i in range(total_orbit_number1 - 1):
+        if power_on_time[i + 1].unix - data_off_time[i].unix == 60:
+            pass
+        else:
+            return 'time interval Error'
+        if attitude_command_time[i] != None:
+            attitude_command_time_1 = Time(attitude_command_time[i], format='iso')
+            if power_on_time[i + 1].unix - attitude_command_time_1.unix == 8 * 60:
+                pass
+            else:
+                return 'time interval Error'
+
+    return True
+
+
+# print(np.array(txt_contents))
+
+time_sequence_bool = time_interval_check(power_on_time, data_off_time, attitude_command_time)
+print('time sequence: ', time_sequence_bool)
