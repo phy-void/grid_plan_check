@@ -46,3 +46,6 @@ print(txt_contents[5][2]== 'load_bin_file tg_PowerOnM.bin')
 print(txt_contents[5][2].rstrip('\x00')=='load_bin_file tg_PowerOnM.bin')
 print('load_bin_file tg_PowerOnM.bin'=='load_bin_file tg_PowerOnM.bin')
 '''
+a=[1,2,3]
+a.pop(1)
+print(a)
