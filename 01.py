@@ -2,7 +2,8 @@ import numpy as np
 from astropy.time import Time
 
 txt_file_path = './'
-input_name = 'tg_20210120T01h00m30s.txt'
+input_name = 'tg_20210119T15h00m30s.txt'
+# tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt (use for test)
 txt_file_name = txt_file_path + input_name
 txt_file = open(txt_file_name, 'r')
 txt_lines = txt_file.readlines()
@@ -49,7 +50,7 @@ def structure_check(txt_content):
     # check repeated time
     for i in range(len(txt_content) - 1):
         time_index = 1
-        if txt_content[i][time_index] == txt_content[i + 1][time_index]:
+        if txt_content[i][time_index] >= txt_content[i + 1][time_index]:
             return False
 
     return True
