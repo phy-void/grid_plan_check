@@ -171,7 +171,7 @@ def time_interval_check(power_on_time, data_off_time, attitude_command_time):
 
 
 def read_STK_orbit_file(filename):
-    print("   Loading STK orbit file %s" % (filename))
+    print('Loading STK orbit file {}...'.format(filename))
     with open(filename) as f:
         # to remove \r\n using the following line
         lines = [line.rstrip() for line in f]
