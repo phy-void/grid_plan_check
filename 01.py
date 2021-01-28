@@ -7,7 +7,7 @@ txt_file_path = './'
 input_name = 'tg_20210128T01h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
 txt_file_name = txt_file_path + input_name
-orbit_file_path = 'orb_20201118.txt'
+orbit_file_path = 'orb_20210128.txt'
 saa_coord_file = 'coords.txt'
 saa_flux_file = 'AE8_MIN_0.1MeV.txt'
 
@@ -231,6 +231,42 @@ def read_STK_orbit_file(filename):
     return t_bj, lat, lon, alt, ra, dec
 
 
+def find_orbit_time_index(orb_time, power_on_time, data_on_time):
+    # orb_time: Time; power_on_time, data_on_time: list
+    total_orbit_number = len(power_on_time)
+    orbit_time_len = len(orb_time)
+    power_on_time = Time(power_on_time, format='iso')
+    data_on_time = Time(data_on_time, format='iso')
+    power_on_time_index = []
+    data_on_time_index = []
+    for i in range(total_orbit_number):
+        for j in range(orbit_time_len):
+            if power_on_time[i].unix <= orb_time[j].unix:
+                power_on_time_index.append(j)
+                break
+        for j in range(orbit_time_len):
+            if data_on_time[i].unix <= orb_time[j].unix:
+                data_on_time_index.append(j)
+                break
+
+    for j in range(orbit_time_len):
+        if power_on_time[0].unix - 5 * 60 <= orb_time[j].unix:
+            first_power_on_index = j
+    return power_on_time_index, data_on_time_index, first_power_on_index
+
+
+def SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index):
+    total_orbit_number = len(power_on_time_index)
+    for i in range(total_orbit_number):
+        for j in range(power_on_time_index[i], data_on_time_index[i] + 1):
+            if orb_log_flux[j] >= 1.0:
+                return False
+    for i in range(first_power_on_index, power_on_time_index[0]):
+        if orb_log_flux[i] >= 1.0:
+            return False
+    return True
+
+
 print('checking structure...')
 structure_bool = structure_check(txt_contents)
 # print(np.array(txt_contents))
@@ -259,33 +295,7 @@ points[:, 0] = map_lon
 points[:, 1] = map_lat
 orb_log_flux = interpolate.griddata(points, np.log10(flux), (orb_lon, orb_lat), method='linear')
 
-
-def find_orbit_time_index(orb_time, power_on_time, data_on_time):
-    # orb_time: Time; power_on_time, data_on_time: list
-    total_orbit_number = len(power_on_time)
-    power_on_time = Time(power_on_time, format='iso')
-    data_on_time = Time(data_on_time, format='iso')
-    power_on_time_index = []
-    data_on_time_index = []
-    for i in range(total_orbit_number):
-        for j in range(len(orb_time)):
-            if power_on_time[i].unix <= orb_time[j].unix:
-                power_on_time_index.append(j)
-                break
-        for j in range(len(orb_time)):
-            if data_on_time[i].unix <= orb_time[j].unix:
-                data_on_time_index.append(j)
-                break
-    return power_on_time_index, data_on_time_index
-
-
-power_on_time_index, data_on_time_index = find_orbit_time_index(orb_time_bj, power_on_time, data_on_time)
-
-
-def SAA_check(power_on_time_index, data_on_time_index, orb_log_flux):
-    total_orbit_number = len(power_on_time_index)
-    for i in range(total_orbit_number):
-        for j in range(power_on_time_index[i], data_on_time_index[i] + 1):
-            if orb_log_flux[j] >= 1.0:
-                return False
-    return True
+power_on_time_index, data_on_time_index, first_power_on_index = find_orbit_time_index(orb_time_bj, power_on_time,
+                                                                                      data_on_time)
+print('checking orbit flux...')
+print('flux check: ', SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index))
