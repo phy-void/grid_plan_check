@@ -137,7 +137,4 @@ orb_log_flux = interpolate.griddata(points, np.log10(flux), (orb_lon, orb_lat), 
 print(len(orb_time_bj))
 print(len(orb_log_flux))
 '''
-a=1
-def x(a):
-    return a+1
-print(x(2))
+print(('a' in 'abc d'))
