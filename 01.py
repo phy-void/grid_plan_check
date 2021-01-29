@@ -3,7 +3,7 @@ from astropy.time import Time
 import re
 from scipy import interpolate
 
-txt_file_path = './'
+txt_file_path = './command txt file/'
 input_name = 'tg_20210128T01h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
 txt_file_name = txt_file_path + input_name
@@ -15,6 +15,8 @@ txt_file = open(txt_file_name, 'r')
 txt_lines = txt_file.readlines()
 txt_file.close()
 
+# read txt file:
+# data format: list; element: ['#01', '2021-01-28 01:00:30', 'pobc_on', '(hex-command)']
 txt_contents = []
 command_index = 0
 for i in range(len(txt_lines)):
@@ -29,6 +31,7 @@ for i in range(len(txt_lines)):
     pass
 
 
+# the first five commands and the last four are fixed
 def structure_check(txt_content):
     dictionary_head = ['pobc_on', 'enable_saving_kpack', 'enable_saving_telemetry',
                        'enable_saving_status', 'star_tracker_on']
@@ -53,7 +56,7 @@ def structure_check(txt_content):
             pass
         if n != 1:
             return False
-    # check repeated time
+    # check repeated time: commands should be arranged by time sequence
     for i in range(len(txt_content) - 1):
         time_index = 1
         if txt_content[i][time_index] >= txt_content[i + 1][time_index]:
@@ -61,7 +64,7 @@ def structure_check(txt_content):
 
     return True
 
-
+# recognize each orbit time from txt_contents
 def orbit_recognition(txt_content):
     power_on_time = []
     data_on_time = []
@@ -69,6 +72,7 @@ def orbit_recognition(txt_content):
     attitude_quaternion = []
     attitude_command_time = []
 
+    # these index lists are used for checking command existence and sequence
     power_on_index = []
     data_on_index = []
     data_off_index = []
@@ -76,6 +80,7 @@ def orbit_recognition(txt_content):
     sun_tracking_mode_index = []
 
     for line in txt_content:
+        # the first start in a day will use PowerOnM, to examine some electronic status
         if line[2] == 'load_bin_file tg_PowerOnM.bin' or line[2] == 'load_bin_file tg_PowerOn.bin':
             power_on_time.append(line[1])
             power_on_index.append(txt_content.index(line))
@@ -84,7 +89,7 @@ def orbit_recognition(txt_content):
             line_index = txt_content.index(line)
             data_on_index.append(line_index)
             next_line = txt_content[line_index + 1][2].split(' ')
-            if next_line[0] == 'upload_quaternion':
+            if next_line[0] == 'upload_quaternion':# these three commands suggest attitude control
                 attitude_quaternion.append([float(next_line[1]), float(next_line[2]), float(next_line[3])])
                 # check attitude command structure
                 if txt_content[line_index + 2][2] == 'set_inertial_pointing_mode' \
@@ -129,17 +134,20 @@ def orbit_recognition(txt_content):
     attitude_quaternion.pop(-1)
 
     # command sequence check
+    error = 0
+    att_n = 0
     for i in range(len(power_on_time)):
-        error = 0
-        att_n = 0
+        # sequence in each orbit: power_on->data_on->data_off
         if power_on_index[i] >= data_on_index[i] or data_on_index[i] >= data_off_index[i]:
             error += 1
+        # the last data transfer: set satellite to magnetic_sun_tracking mode
         if magnetic_sun_tracking_index in range(data_on_index[-1], data_off_index[-1]):
             pass
         else:
             error += 1
+        # if an orbit after one with attitude, should transfer 'start_sun_tracking_mode' before it
         if attitude_command_time[i] != None and i < len(power_on_time) - 1 and attitude_command_time[i + 1] == None:
-            if sun_tracking_mode_index[att_n] in range(data_on_index[i + 1], data_off_index[i + 1]):
+            if sun_tracking_mode_index[att_n] in range(data_on_index[i], data_off_index[i]):
                 att_n += 1
             else:
                 error += 1

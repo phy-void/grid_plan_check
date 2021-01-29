@@ -137,4 +137,7 @@ orb_log_flux = interpolate.griddata(points, np.log10(flux), (orb_lon, orb_lat), 
 print(len(orb_time_bj))
 print(len(orb_log_flux))
 '''
-print(('a' in 'abc d'))
+'''print(('a' in 'abc d'))
+'''
+if 10 in range(9,11):
+    print(1)
