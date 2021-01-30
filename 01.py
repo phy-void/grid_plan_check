@@ -9,7 +9,7 @@ from pyquaternion import Quaternion
 np.set_printoptions(precision=2, threshold=100)
 
 txt_file_path = './command txt file/'
-input_name = 'tg_20210128T01h00m30s.txt'
+input_name = 'tg_20210128T15h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
 txt_file_name = txt_file_path + input_name
 orbit_file_path = 'orb_20210128.txt'
@@ -88,6 +88,10 @@ def orbit_recognition(txt_content):
     for line in txt_content:
         # the first start in a day will use PowerOnM, to examine some electronic status
         if line[2] == 'load_bin_file tg_PowerOnM.bin' or line[2] == 'load_bin_file tg_PowerOn.bin':
+            if line[2] == 'load_bin_file tg_PowerOnM.bin':
+                PowerOnM = True
+            else:
+                PowerOnM = False
             power_on_time.append(line[1])
             power_on_index.append(txt_content.index(line))
         if line[2] == 'load_bin_file tg_TXDataOn.bin':
@@ -120,8 +124,10 @@ def orbit_recognition(txt_content):
             break
 
     if first_attitude_index < power_on_index[0]:  # first orbit has attitude command
-        if Time(power_on_time[0], format='iso').unix - Time(txt_content[first_attitude_index + 2][1],
-                                                            format='iso').unix == 13 * 60 \
+        if (Time(power_on_time[0], format='iso').unix - Time(txt_content[first_attitude_index + 2][1],
+                                                             format='iso').unix == 8 * 60 and PowerOnM == False) \
+                or (Time(power_on_time[0], format='iso').unix - Time(txt_content[first_attitude_index + 2][1],
+                                                                     format='iso').unix == 13 * 60 and PowerOnM == True) \
                 and txt_content[first_attitude_index + 1][2] == 'set_inertial_pointing_mode' \
                 and txt_content[first_attitude_index + 2][2] == 'start_inertial_pointing':
             first_quaternion = txt_content[first_attitude_index][2].split(' ')
@@ -129,6 +135,7 @@ def orbit_recognition(txt_content):
                                            float(first_quaternion[3])])
             attitude_command_time.insert(0, txt_content[first_attitude_index + 2][1])
         else:
+            print(1)  # ...
             return 'command sequence Error'
     else:
         attitude_quaternion.insert(0, [None, None, None])
@@ -152,7 +159,7 @@ def orbit_recognition(txt_content):
         else:
             error += 1
         # if an orbit after one with attitude, should transfer 'start_sun_tracking_mode' before it
-        if attitude_command_time[i] != None and i < len(power_on_time) - 1 and attitude_command_time[i + 1] == None:
+        if attitude_command_time[i] != None and i < len(power_on_time) - 1:
             if sun_tracking_mode_index[att_n] in range(data_on_index[i], data_off_index[i]):
                 att_n += 1
             else:
@@ -383,6 +390,7 @@ structure_bool = structure_check(txt_contents)
 print('structure: ', structure_bool)
 print('checking orbit time sequence...')
 # print(orbit_recognition(txt_contents))
+
 power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time = orbit_recognition(txt_contents)
 # print(len(power_on_time), np.shape(attitude_quaternion), len(data_on_time))
 time_sequence_bool = time_interval_check(power_on_time, data_off_time, attitude_command_time)
@@ -436,4 +444,3 @@ star_tracker_xyz = -np.sin(np.deg2rad(18)) * solar_panel_xyz + np.cos(np.deg2rad
 
 star_tracker_bool = star_tracker_angle_check(star_tracker_xyz, q_list, earth_ra, earth_dec, c_sun, att_index_bool_list)
 print('star tracker angle check: ', star_tracker_bool)
-
