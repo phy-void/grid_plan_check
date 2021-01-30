@@ -2,6 +2,7 @@ import numpy as np
 from astropy.time import Time
 import re
 from scipy import interpolate
+from pyquaternion import Quaternion
 
 '''
 a=[1,2,3]
@@ -139,5 +140,19 @@ print(len(orb_log_flux))
 '''
 '''print(('a' in 'abc d'))
 '''
-if 10 in range(9,11):
+'''if 10 in range(9,11):
     print(1)
+'''
+'''a=Time([0,1,2],format='unix')
+print(a[[True,False,True]])
+'''
+'''
+q=Quaternion(0.437548,0.702101, 0.440992, -0.348040)
+q2=Quaternion(0.475,0.74,0.37,-0.3)
+q3=Quaternion(0.565,0.82,-0.092,0)
+a=np.array([0,0,-1])
+print(q.rotate(a))
+
+print(type(np.linalg.norm([3,4])))
+print(np.inner([1,0,0],[3,4,5]))
+'''

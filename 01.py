@@ -2,6 +2,9 @@ import numpy as np
 from astropy.time import Time
 import re
 from scipy import interpolate
+from astropy.coordinates import get_sun
+from astropy.coordinates import SkyCoord
+from pyquaternion import Quaternion
 
 txt_file_path = './command txt file/'
 input_name = 'tg_20210128T01h00m30s.txt'
@@ -64,6 +67,7 @@ def structure_check(txt_content):
 
     return True
 
+
 # recognize each orbit time from txt_contents
 def orbit_recognition(txt_content):
     power_on_time = []
@@ -89,7 +93,7 @@ def orbit_recognition(txt_content):
             line_index = txt_content.index(line)
             data_on_index.append(line_index)
             next_line = txt_content[line_index + 1][2].split(' ')
-            if next_line[0] == 'upload_quaternion':# these three commands suggest attitude control
+            if next_line[0] == 'upload_quaternion':  # these three commands suggest attitude control
                 attitude_quaternion.append([float(next_line[1]), float(next_line[2]), float(next_line[3])])
                 # check attitude command structure
                 if txt_content[line_index + 2][2] == 'set_inertial_pointing_mode' \
@@ -266,13 +270,60 @@ def find_orbit_time_index(orb_time, power_on_time, data_on_time):
 def SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index):
     total_orbit_number = len(power_on_time_index)
     for i in range(total_orbit_number):
-        for j in range(power_on_time_index[i], data_on_time_index[i] + 1):
+        for j in range(power_on_time_index[i], data_on_time_index[i]):
             if orb_log_flux[j] >= 1.0:
                 return False
     for i in range(first_power_on_index, power_on_time_index[0]):
         if orb_log_flux[i] >= 1.0:
             return False
     return True
+
+
+def calculate_quaternion(attitude_quaternion):
+    q_list = []
+    for i in attitude_quaternion:
+        if i[0] == None:
+            pass
+        else:
+            q_234 = np.array(i)
+            sum = np.sum(np.power(q_234, 2))
+            q_1 = np.sqrt(1 - sum)
+            q = Quaternion(q_1, q_234[0], q_234[1], q_234[2])
+            q_list.append(q)
+
+    return q_list
+
+
+def vector_angle(v1, v2):
+    n1 = np.linalg.norm(v1)
+    n2 = np.linalg.norm(v2)
+    cos = np.inner(v1, v2) / (n1 * n2)
+    return np.arccos(cos)
+
+
+def radec_to_xyz(ra, dec):
+    x = np.cos(dec) * np.cos(ra)
+    y = np.cos(dec) * np.sin(ra)
+    z = np.sin(dec)
+    return x, y, z
+
+
+def pointing_check(target_ra, target_dec, q_list):
+    target_xyz = np.array(radec_to_xyz(target_ra, target_dec))
+    detector_initial = np.array([0, 0, -1])
+    angle = []
+    error = 0
+    for q in q_list:
+        detector_xyz = q.rotate(detector_initial)
+        angle1 = np.rad2deg(vector_angle(target_xyz, detector_xyz))
+        angle.append(angle1)
+        if angle1 >= 15:
+            error += 1
+    print(angle)
+    if error > 0:
+        return False
+    else:
+        return True
 
 
 print('checking structure...')
@@ -307,3 +358,18 @@ power_on_time_index, data_on_time_index, first_power_on_index = find_orbit_time_
                                                                                       data_on_time)
 print('checking orbit flux...')
 print('flux check: ', SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index))
+
+# calculate detector pointing: -z rotate by quaternion
+# NOTE: after 'upload_quaternion' there are three numbers, which are the 2, 3, 4th parameter of Quaternion(). The first parameter is Sqrt[1-a^2-b^2-c^2].
+q_list = calculate_quaternion(attitude_quaternion)
+target_ra = np.deg2rad(083.63308)
+target_dec = np.deg2rad(22.01450)
+pointing_bool = pointing_check(target_ra, target_dec, q_list)
+print('checking satellite attitude...')
+print('detector pointing check: ', pointing_bool)
+
+'''
+orbit_time_on = []
+for i in range(len(power_on_time)):
+    orbit_time_on.extend(orb_time_bj[power_on_time_index[i]:data_on_time_index[i]].unix)
+'''
