@@ -6,6 +6,8 @@ from astropy.coordinates import get_sun
 from astropy.coordinates import SkyCoord
 from pyquaternion import Quaternion
 
+np.set_printoptions(precision=2, threshold=100)
+
 txt_file_path = './command txt file/'
 input_name = 'tg_20210128T01h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
@@ -305,11 +307,20 @@ def radec_to_xyz(ra, dec):
     x = np.cos(dec) * np.cos(ra)
     y = np.cos(dec) * np.sin(ra)
     z = np.sin(dec)
-    return x, y, z
+    length = np.shape(x)
+    if len(length) == 0:
+        length = 1
+    else:
+        length = length[0]
+    x = np.reshape(x, [length, 1])
+    y = np.reshape(y, [length, 1])
+    z = np.reshape(z, [length, 1])
+    xyz = np.concatenate((x, y, z), axis=1)
+    return xyz
 
 
 def pointing_check(target_ra, target_dec, q_list):
-    target_xyz = np.array(radec_to_xyz(target_ra, target_dec))
+    target_xyz = radec_to_xyz(target_ra, target_dec)[0]
     detector_initial = np.array([0, 0, -1])
     angle = []
     error = 0
@@ -319,11 +330,51 @@ def pointing_check(target_ra, target_dec, q_list):
         angle.append(angle1)
         if angle1 >= 15:
             error += 1
-    print(angle)
+    print('angle between target and detector: ', angle)
     if error > 0:
-        return False
+        return False, angle
     else:
-        return True
+        return True, angle
+
+
+def index_select(power_on_time_index, data_on_time_index, attitude_command_time, orbit_len):
+    index = np.array(range(orbit_len))
+    index_bool = (index > -1)
+    att_index_bool = (index > -1)
+    index_bool_list = []
+    att_index_bool_list = []
+    for i in range(len(power_on_time_index)):
+        index_bool_list.append(index_bool & (index >= power_on_time_index[i]) & (index < data_on_time_index[i]))
+        if attitude_command_time[i] is not None:
+            att_index_bool_list.append(
+                att_index_bool & (index >= power_on_time_index[i]) & (index < data_on_time_index[i]))
+    return index_bool_list, att_index_bool_list
+
+
+def star_tracker_angle_check(st_xyz, q_list, earth_ra, earth_dec, c_sun, att_index_bool_list):
+    earth_xyz = radec_to_xyz(earth_ra, earth_dec)
+    sun_xyz = radec_to_xyz(c_sun.ra.radian, c_sun.dec.radian)
+    st_xyz_r = []
+    st_earth_angle = []
+    st_sun_angle = []
+    for q in q_list:
+        st_xyz_r1 = q.rotate(st_xyz)
+        st_xyz_r.append(st_xyz_r1)
+    for i in range(len(att_index_bool_list)):
+        sun_xyz1 = sun_xyz[att_index_bool_list[i]]
+        earth_xyz1 = earth_xyz[att_index_bool_list[i]]
+        for j in range(len(sun_xyz1)):
+            angle_s = vector_angle(sun_xyz1[j], st_xyz_r[i])
+            angle_e = vector_angle(earth_xyz1[j], st_xyz_r[i])
+            st_earth_angle.append(angle_e)
+            st_sun_angle.append(angle_s)
+            if np.rad2deg(angle_e) < 100 or np.rad2deg(angle_s) < 60:
+                return False
+    st_earth_angle = np.array(st_earth_angle)
+    st_sun_angle = np.array(st_sun_angle)
+    print('angle between sun and star tracker: ', np.rad2deg(st_sun_angle))
+    print('angle between earth and star tracker: ', np.rad2deg(st_earth_angle))
+    return True
 
 
 print('checking structure...')
@@ -338,6 +389,7 @@ time_sequence_bool = time_interval_check(power_on_time, data_off_time, attitude_
 print('time interval: ', time_sequence_bool)
 
 orb_time_bj, orb_lat, orb_lon, orb_alt, orb_ra, orb_dec, = read_STK_orbit_file(orbit_file_path)
+orbit_len = len(orb_ra)
 
 coord = np.loadtxt(saa_coord_file, comments="'", skiprows=26, delimiter=',')
 map_lat = np.deg2rad(coord[:, 1])
@@ -364,12 +416,24 @@ print('flux check: ', SAA_check(power_on_time_index, data_on_time_index, orb_log
 q_list = calculate_quaternion(attitude_quaternion)
 target_ra = np.deg2rad(083.63308)
 target_dec = np.deg2rad(22.01450)
-pointing_bool = pointing_check(target_ra, target_dec, q_list)
+pointing_bool, det_target_angle = pointing_check(target_ra, target_dec, q_list)
 print('checking satellite attitude...')
 print('detector pointing check: ', pointing_bool)
 
-'''
-orbit_time_on = []
-for i in range(len(power_on_time)):
-    orbit_time_on.extend(orb_time_bj[power_on_time_index[i]:data_on_time_index[i]].unix)
-'''
+on_index_bool_list, att_index_bool_list = index_select(power_on_time_index, data_on_time_index, attitude_command_time,
+                                                       orbit_len)
+
+earth_ra = orb_ra + np.pi
+earth_dec = -orb_dec
+sun_pos = get_sun(orb_time_bj)
+sun_ra = sun_pos.ra.radian
+sun_dec = sun_pos.dec.radian
+c_sun = SkyCoord(ra=sun_ra, dec=sun_dec, unit='radian', frame='fk5')
+
+detector_xyz = np.array([0, 0, -1])
+solar_panel_xyz = np.array([0, -1, 0])
+star_tracker_xyz = -np.sin(np.deg2rad(18)) * solar_panel_xyz + np.cos(np.deg2rad(18)) * detector_xyz
+
+star_tracker_bool = star_tracker_angle_check(star_tracker_xyz, q_list, earth_ra, earth_dec, c_sun, att_index_bool_list)
+print('star tracker angle check: ', star_tracker_bool)
+

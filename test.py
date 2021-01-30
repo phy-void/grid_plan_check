@@ -156,3 +156,5 @@ print(q.rotate(a))
 print(type(np.linalg.norm([3,4])))
 print(np.inner([1,0,0],[3,4,5]))
 '''
+a=np.array([0.2,0.2,-1.])
+print('{!r,0:.0f}'.format(a))
