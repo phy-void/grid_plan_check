@@ -3,7 +3,7 @@ from astropy.time import Time
 import re
 from scipy import interpolate
 from pyquaternion import Quaternion
-
+import matplotlib.pyplot as plt
 '''
 a=[1,2,3]
 print(a[-2:])
@@ -156,5 +156,7 @@ print(q.rotate(a))
 print(type(np.linalg.norm([3,4])))
 print(np.inner([1,0,0],[3,4,5]))
 '''
-a=np.array([0.2,0.2,-1.])
+'''a=np.array([0.2,0.2,-1.])
 print('{!r,0:.0f}'.format(a))
+'''
+print([1,2] in [[1,2],[0,2]])

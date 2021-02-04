@@ -5,6 +5,7 @@ from scipy import interpolate
 from astropy.coordinates import get_sun
 from astropy.coordinates import SkyCoord
 from pyquaternion import Quaternion
+import matplotlib.pyplot as plt
 
 np.set_printoptions(precision=2, threshold=100)
 
@@ -96,7 +97,13 @@ def orbit_recognition(txt_content):
             power_on_index.append(txt_content.index(line))
         if line[2] == 'load_bin_file tg_TXDataOn.bin':
             data_on_time.append(line[1])
-            line_index = txt_content.index(line)
+            try:
+                if attitude_command_time[-1] == None:
+                    line_index = txt_content.index(line)
+                else:
+                    line_index = txt_content.index(line) + 1
+            except:
+                line_index = txt_content.index(line)
             data_on_index.append(line_index)
             next_line = txt_content[line_index + 1][2].split(' ')
             if next_line[0] == 'upload_quaternion':  # these three commands suggest attitude control
@@ -393,6 +400,7 @@ print('checking orbit time sequence...')
 
 power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time = orbit_recognition(txt_contents)
 # print(len(power_on_time), np.shape(attitude_quaternion), len(data_on_time))
+print(attitude_command_time)
 time_sequence_bool = time_interval_check(power_on_time, data_off_time, attitude_command_time)
 print('time interval: ', time_sequence_bool)
 
@@ -444,3 +452,20 @@ star_tracker_xyz = -np.sin(np.deg2rad(18)) * solar_panel_xyz + np.cos(np.deg2rad
 
 star_tracker_bool = star_tracker_angle_check(star_tracker_xyz, q_list, earth_ra, earth_dec, c_sun, att_index_bool_list)
 print('star tracker angle check: ', star_tracker_bool)
+
+# pyplot
+plt.figure(figsize=[9, 6])
+ttt = flux > 1
+plt.scatter(np.rad2deg(map_lon[ttt]), np.rad2deg(map_lat[ttt]), s=1)
+
+for i in range(len(attitude_command_time)):
+    if attitude_command_time[i] is not None:
+        plt.scatter(np.rad2deg(orb_lon[on_index_bool_list[i]]), np.rad2deg(orb_lat[on_index_bool_list[i]]),
+                    c='r', s=1)
+    else:
+        plt.scatter(np.rad2deg(orb_lon[on_index_bool_list[i]]), np.rad2deg(orb_lat[on_index_bool_list[i]]),
+                    c='m', s=1)
+
+plt.xlabel('longitude')
+plt.ylabel('latitude')
+plt.show()
