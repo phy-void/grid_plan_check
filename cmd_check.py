@@ -3,49 +3,6 @@ import struct
 from astropy.time import Time
 import numpy as np
 
-# return the cmd code given the string
-def get_cmd_code(str_cmd):
-    cmd_list = {
-        'magnetic_sun_tracking':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 08 aa aa b9 16 42 17',#
-        'enable_saving_kpack':          'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 02 00 0a ff ff ff ff ff ff 19 e6 26 1a',#
-        'disable_saving_kpack':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 02 00 00 00 00 ff ff ff ff ed 65 4d df',#
-        'enable_saving_telemetry':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 34 00 01 ff ff ff ff ff ff 43 8c 02 22',#
-        'disable_saving_telemetry':     'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 34 00 00 00 00 ff ff ff ff 41 27 e1 ec',#
-        'enable_saving_status':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 00 00 01 ff ff ff ff ff ff 02 5f 74 70',#
-        'star_tracker_on':              'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f aa 71 6d 7e ca',
-        'star_tracker_off':             'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f 00 b8 c4 e3 54',
-        'disable_saving_status':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 00 00 00 00 00 ff ff ff ff 00 f4 97 be',#
-        'upload_quaternion':            'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 37 00 14 00 00 00 00 00 11 00 00 00 00 08',#
-        'set_inertial_pointing_mode':   'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 14 00 00 00 00 00 08 00 00 00 00 33 29 00 aa 40 58 1a 76',#
-        'start_inertial_pointing':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 07 aa aa f5 b7 18 bb',#
-        'load_bin_file':                'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 02 00 00 00 15 00 00 00 00 04',#
-        'start_sun_tracking_mode':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 04 aa aa 1f 99 d8 c8',#
-        'pobc_on':                      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 00 aa a9 d1 85 b6',
-        'reboot_pobc':                  'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 70 72 65 73 74 2e 62 69 6e 00 00 00 00 00 00 00',
-        'clear_flash':                  'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 74 79 5f 70 6c 5f 65 66 2e 62 69 6e 00 00 00 00',
-        'gyro_lowpassfilter_on':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 01 aa',
-        'gyro_lowpassfilter_off':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 00 aa',
-        'enable_pi_control':            'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 01 aa',
-        'disable_pi_control':           'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 00 aa',
-        'enable_mwheel_unload':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 01 aa',
-        'disable_mwheel_unload':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 00 aa',
-        'temp1':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 25 aa',
-        'temp2':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 1b aa',
-        'temp3':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 00 aa',
-        'temp4':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 00 aa',
-        'disable_auto_tg_read':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 06 00 00 00 00 00 00',
-        'adjust_reading_speed_1':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 54 01 00 00 00 00 00',
-        'adjust_reading_speed_2':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 52 01 00 00 00 00 00'
-    }
-
-    if str_cmd in cmd_list.keys():
-        txt_cmd = cmd_list[str_cmd]
-        if str_cmd.startswith('load_bin_file'):
-            pass#txt_cmd += '00000000'
-    else:
-        txt_cmd = 'unknown_cmd'
-
-    return txt_cmd.replace(' ', '')
 
 # given hex string and calculate 4 byte CRC
 def calc_crc(hex_str):
@@ -98,6 +55,130 @@ def calc_crc(hex_str):
     return crc_hex
 
 ###############################################################################
+
+def hex_command_check(txt_file_name):
+
+    cmd_list = {
+        'magnetic_sun_tracking': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 08 aa aa b9 16 42 17',
+        #
+        'enable_saving_kpack': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 02 00 0a ff ff ff ff ff ff 19 e6 26 1a',
+        #
+        'disable_saving_kpack': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 02 00 00 00 00 ff ff ff ff ed 65 4d df',
+        #
+        'enable_saving_telemetry': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 34 00 01 ff ff ff ff ff ff 43 8c 02 22',
+        #
+        'disable_saving_telemetry': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 34 00 00 00 00 ff ff ff ff 41 27 e1 ec',
+        #
+        'enable_saving_status': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 00 00 01 ff ff ff ff ff ff 02 5f 74 70',
+        #
+        'star_tracker_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f aa 71 6d 7e ca',
+        'star_tracker_off': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f 00 b8 c4 e3 54',
+        'disable_saving_status': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 00 00 00 00 00 ff ff ff ff 00 f4 97 be',
+        #
+        'upload_quaternion': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 37 00 14 00 00 00 00 00 11 00 00 00 00 08',
+        #
+        'set_inertial_pointing_mode': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 14 00 00 00 00 00 08 00 00 00 00 33 29 00 aa 40 58 1a 76',
+        #
+        'start_inertial_pointing': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 07 aa aa f5 b7 18 bb',
+        #
+        'load_bin_file': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 02 00 00 00 15 00 00 00 00 04',  #
+        'start_sun_tracking_mode': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 04 aa aa 1f 99 d8 c8',
+        #
+        'pobc_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 00 aa a9 d1 85 b6',
+        'reboot_pobc': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 70 72 65 73 74 2e 62 69 6e 00 00 00 00 00 00 00',
+        'clear_flash': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 74 79 5f 70 6c 5f 65 66 2e 62 69 6e 00 00 00 00',
+        'gyro_lowpassfilter_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 01 aa',
+        'gyro_lowpassfilter_off': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 00 aa',
+        'enable_pi_control': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 01 aa',
+        'disable_pi_control': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 00 aa',
+        'enable_mwheel_unload': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 01 aa',
+        'disable_mwheel_unload': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 00 aa',
+        'temp1': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 25 aa',
+        'temp2': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 1b aa',
+        'temp3': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 00 aa',
+        'temp4': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 00 aa',
+        'disable_auto_tg_read': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 06 00 00 00 00 00 00',
+        'adjust_reading_speed_1': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 54 01 00 00 00 00 00',
+        'adjust_reading_speed_2': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 52 01 00 00 00 00 00'
+    }
+
+    # since the'\x00' hex symbol after some commands like 'tg_PowerOn.bin' may cause difference between main function and this part,
+    # this function is made to check the hex code and read txt file independently.
+    txt_file = open(txt_file_name, 'r')
+    txt_lines = txt_file.readlines()
+    txt_file.close()
+
+    txt_contents = []
+    command_index = 0
+    for i in range(len(txt_lines)):
+        if i % 2 == 0:
+            line = txt_lines[i].split(', ')
+            line[-1] = line[-1].rstrip('\n')
+            #        line[-1] = line[-1].rstrip('\x00')
+            txt_contents.append(line)
+        else:
+            txt_contents[command_index].append(txt_lines[i].rstrip('\n'))
+            command_index += 1
+        pass
+
+    error_index = 0
+    for i in range(len(txt_contents)):
+        txt_contents[i][3] = txt_contents[i][3].replace(' ', '')
+        if txt_contents[i][2].startswith('load_bin_file'):
+            file_name = txt_contents[i][2].split(" ")[1]
+            cmd = cmd_list['load_bin_file'].replace(' ', '') + file_name.encode('utf-8').hex()
+            cmd += calc_crc(cmd)
+            if (txt_contents[i][3][8:] != cmd):
+                error_index = i + 1
+                break
+            pass
+        elif txt_contents[i][2].startswith('upload_quaternion'):
+            q = txt_contents[i][2].split(" ")[1:]
+            qhex1 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
+            qhex2 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
+            qhex3 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
+            if abs(float(q[0]) - qhex1) >= 2E-6:
+                error_index = i + 1
+                break
+            if abs(float(q[1]) - qhex2) >= 2E-6:
+                error_index = i + 1
+                break
+            if abs(float(q[2]) - qhex3) >= 2E-6:
+                error_index = i + 1
+                break
+        else:
+            if (cmd_list[txt_contents[i][2]].replace(' ', '') != txt_contents[i][3][8:]):
+                error_index = i + 1
+                break
+
+    '''
+    if (error_index != 0):
+        print("the cmd_code in line #%d is wrong!" % error_index)
+        exit()
+        '''
+
+    for line in txt_contents:
+        time = Time(line[1], format='iso').unix - Time(txt_contents[0][1], format='iso').unix
+        cmd_time = int(line[3][:8], 16)
+        if (time != cmd_time):
+            error_index = i + 1
+            break
+
+    '''
+    if (error_index != 0):
+        print("the cmd_code in line #%d is wrong!" % error_index)
+        '''
+    if (error_index != 0):
+        return error_index
+error_index=hex_command_check(txt_file_name)
+print('checking command code in hex form...')
+if error_index!=0:
+    print("the cmd_code in line #%d is wrong!" % error_index)
+    pass
+else:
+    print('hex code: True')
+
+
 txt_file_path = './command txt file/'
 input_name = 'tg_20210119T15h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
@@ -106,46 +187,36 @@ txt_file_name = txt_file_path + input_name
 # saa_coord_file = 'coords.txt'
 # saa_flux_file = 'AE8_MIN_0.1MeV.txt'
 cmd_list = {
-    'magnetic_sun_tracking': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 08 aa aa b9 16 42 17',
-    #
-    'enable_saving_kpack': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 02 00 0a ff ff ff ff ff ff 19 e6 26 1a',
-    #
-    'disable_saving_kpack': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 02 00 00 00 00 ff ff ff ff ed 65 4d df',
-    #
-    'enable_saving_telemetry': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 34 00 01 ff ff ff ff ff ff 43 8c 02 22',
-    #
-    'disable_saving_telemetry': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 34 00 00 00 00 ff ff ff ff 41 27 e1 ec',
-    #
-    'enable_saving_status': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 00 00 01 ff ff ff ff ff ff 02 5f 74 70',
-    #
-    'star_tracker_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f aa 71 6d 7e ca',
-    'star_tracker_off': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f 00 b8 c4 e3 54',
-    'disable_saving_status': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 00 00 00 00 00 ff ff ff ff 00 f4 97 be',
-    #
-    'upload_quaternion': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 37 00 14 00 00 00 00 00 11 00 00 00 00 08',  #
-    'set_inertial_pointing_mode': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 14 00 00 00 00 00 08 00 00 00 00 33 29 00 aa 40 58 1a 76',
-    #
-    'start_inertial_pointing': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 07 aa aa f5 b7 18 bb',
-    #
-    'load_bin_file': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 02 00 00 00 15 00 00 00 00 04',  #
-    'start_sun_tracking_mode': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 04 aa aa 1f 99 d8 c8',
-    #
-    'pobc_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 00 aa a9 d1 85 b6',
-    'reboot_pobc': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 70 72 65 73 74 2e 62 69 6e 00 00 00 00 00 00 00',
-    'clear_flash': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 74 79 5f 70 6c 5f 65 66 2e 62 69 6e 00 00 00 00',
-    'gyro_lowpassfilter_on': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 01 aa',
-    'gyro_lowpassfilter_off': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 00 aa',
-    'enable_pi_control': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 01 aa',
-    'disable_pi_control': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 00 aa',
-    'enable_mwheel_unload': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 01 aa',
-    'disable_mwheel_unload': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 00 aa',
-    'temp1': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 25 aa',
-    'temp2': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 1b aa',
-    'temp3': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 00 aa',
-    'temp4': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 00 aa',
-    'disable_auto_tg_read': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 06 00 00 00 00 00 00',
-    'adjust_reading_speed_1': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 54 01 00 00 00 00 00',
-    'adjust_reading_speed_2': 'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 52 01 00 00 00 00 00'
+        'magnetic_sun_tracking':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 08 aa aa b9 16 42 17',#
+        'enable_saving_kpack':          'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 02 00 0a ff ff ff ff ff ff 19 e6 26 1a',#
+        'disable_saving_kpack':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 02 00 00 00 00 ff ff ff ff ed 65 4d df',#
+        'enable_saving_telemetry':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 34 00 01 ff ff ff ff ff ff 43 8c 02 22',#
+        'disable_saving_telemetry':     'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 34 00 00 00 00 ff ff ff ff 41 27 e1 ec',#
+        'enable_saving_status':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 03 00 00 01 ff ff ff ff ff ff 02 5f 74 70',#
+        'star_tracker_on':              'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f aa 71 6d 7e ca',
+        'star_tracker_off':             'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 1f 00 b8 c4 e3 54',
+        'disable_saving_status':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 02 00 14 00 00 00 00 00 0e 00 00 00 00 04 00 00 00 00 00 ff ff ff ff 00 f4 97 be',#
+        'upload_quaternion':            'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 37 00 14 00 00 00 00 00 11 00 00 00 00 08',#
+        'set_inertial_pointing_mode':   'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 14 00 00 00 00 00 08 00 00 00 00 33 29 00 aa 40 58 1a 76',#
+        'start_inertial_pointing':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 07 aa aa f5 b7 18 bb',#
+        'load_bin_file':                'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 02 00 00 00 15 00 00 00 00 04',#
+        'start_sun_tracking_mode':      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 14 00 00 00 00 00 08 00 00 00 00 34 04 aa aa 1f 99 d8 c8',#
+        'pobc_on':                      'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 00 00 14 00 00 00 00 00 07 00 00 00 00 03 00 aa a9 d1 85 b6',
+        'reboot_pobc':                  'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 70 72 65 73 74 2e 62 69 6e 00 00 00 00 00 00 00',
+        'clear_flash':                  'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 01 c2 00 05 00 00 00 00 00 14 00 00 00 00 74 79 5f 70 6c 5f 65 66 2e 62 69 6e 00 00 00 00',
+        'gyro_lowpassfilter_on':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 01 aa',
+        'gyro_lowpassfilter_off':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 33 00 05 00 00 00 00 00 08 00 00 00 00 33 18 00 aa',
+        'enable_pi_control':            'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 01 aa',
+        'disable_pi_control':           'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 1e 00 aa',
+        'enable_mwheel_unload':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 01 aa',
+        'disable_mwheel_unload':        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 34 00 05 00 00 00 00 00 08 00 00 00 00 34 20 00 aa',
+        'temp1':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 25 aa',
+        'temp2':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 1b aa',
+        'temp3':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 01 00 aa',
+        'temp4':                        'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 7e 36 00 05 00 00 00 00 00 08 00 00 00 00 36 02 00 aa',
+        'disable_auto_tg_read':         'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 06 00 00 00 00 00 00',
+        'adjust_reading_speed_1':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 54 01 00 00 00 00 00',
+        'adjust_reading_speed_2':       'eb 90 01 00 01 01 00 00 00 00 00 00 01 00 11 03 00 05 00 00 00 00 00 0c 00 00 00 00 05 52 01 00 00 00 00 00'
 }
 txt_file = open(txt_file_name, 'r')
 txt_lines = txt_file.readlines()
@@ -190,7 +261,7 @@ for i in range(len(txt_contents)):
             error_index = i + 1
             break
     else:
-        if (get_cmd_code(txt_contents[i][2]) != txt_contents[i][3][8:]):
+        if (cmd_list[txt_contents[i][2]].replace(' ','') != txt_contents[i][3][8:]):
             error_index = i + 1
             break
 
