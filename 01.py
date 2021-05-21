@@ -10,6 +10,9 @@ import struct
 
 np.set_printoptions(precision=2, threshold=100)
 
+# here is where to input file name information.
+# Be careful to match STK orbit file and txt command file.
+
 txt_file_path = './command txt file/'
 input_name = 'tg_20210128T15h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
@@ -180,6 +183,7 @@ def orbit_recognition(txt_content):
     return power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time
 
 
+# check time interval between two commands: 1min between on and off; power on 8min after attitude setting.
 def time_interval_check(power_on_time, data_off_time, attitude_command_time):
     total_orbit_number = len(power_on_time)
     power_on_time = Time(power_on_time, format='iso')
@@ -199,6 +203,7 @@ def time_interval_check(power_on_time, data_off_time, attitude_command_time):
     return True
 
 
+# a function to read STK orbit file. copy from original one.
 def read_STK_orbit_file(filename):
     print('Loading STK orbit file {}...'.format(filename))
     with open(filename) as f:
@@ -260,6 +265,7 @@ def read_STK_orbit_file(filename):
     return t_bj, lat, lon, alt, ra, dec
 
 
+# find the position index in orbit length of each on and off time.
 def find_orbit_time_index(orb_time, power_on_time, data_on_time):
     # orb_time: Time; power_on_time, data_on_time: list
     total_orbit_number = len(power_on_time)
@@ -352,6 +358,8 @@ def pointing_check(target_ra, target_dec, q_list):
         return True, angle
 
 
+# get a bool type variable to represent on and off time for convenience.
+# element:bool list, directly use a orbit information array like orb_time[index_bool_list[i]] to get valid part.
 def index_select(power_on_time_index, data_on_time_index, attitude_command_time, orbit_len):
     index = np.array(range(orbit_len))
     index_bool = (index > -1)
