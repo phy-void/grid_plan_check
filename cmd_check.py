@@ -121,8 +121,10 @@ def hex_command_check(txt_file_name):
             command_index += 1
         pass
 
+    #print(len(txt_contents))
     error_index = 0
     for i in range(len(txt_contents)):
+        #print(i)
         txt_contents[i][3] = txt_contents[i][3].replace(' ', '')
         if txt_contents[i][2].startswith('load_bin_file'):
             file_name = txt_contents[i][2].split(" ")[1]
@@ -134,16 +136,16 @@ def hex_command_check(txt_file_name):
             pass
         elif txt_contents[i][2].startswith('upload_quaternion'):
             q = txt_contents[i][2].split(" ")[1:]
-            qhex1 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
-            qhex2 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
-            qhex3 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
-            if abs(float(q[0]) - qhex1) >= 2E-6:
+            qhex1 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
+            qhex2 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
+            qhex3 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
+            if abs(float(q[0]) - qhex1) >= 2E-5:
                 error_index = i + 1
                 break
-            if abs(float(q[1]) - qhex2) >= 2E-6:
+            if abs(float(q[1]) - qhex2) >= 2E-5:
                 error_index = i + 1
                 break
-            if abs(float(q[2]) - qhex3) >= 2E-6:
+            if abs(float(q[2]) - qhex3) >= 2E-5:
                 error_index = i + 1
                 break
         else:
@@ -159,6 +161,7 @@ def hex_command_check(txt_file_name):
 
     for line in txt_contents:
         time = Time(line[1], format='iso').unix - Time(txt_contents[0][1], format='iso').unix
+        #print(line[3][:8])
         cmd_time = int(line[3][:8], 16)
         if (time != cmd_time):
             error_index = i + 1
@@ -168,8 +171,12 @@ def hex_command_check(txt_file_name):
     if (error_index != 0):
         print("the cmd_code in line #%d is wrong!" % error_index)
         '''
-    if (error_index != 0):
-        return error_index
+
+    return error_index
+
+txt_file_path = './command txt file/'
+input_name = 'tg_20210521T00h30m30s.txt'
+txt_file_name = txt_file_path + input_name
 error_index=hex_command_check(txt_file_name)
 print('checking command code in hex form...')
 if error_index!=0:
@@ -178,7 +185,7 @@ if error_index!=0:
 else:
     print('hex code: True')
 
-
+'''
 txt_file_path = './command txt file/'
 input_name = 'tg_20210119T15h00m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
@@ -278,3 +285,4 @@ for line in txt_contents:
 
 if (error_index != 0):
     print("the cmd_code in line #%d is wrong!" % error_index)
+'''

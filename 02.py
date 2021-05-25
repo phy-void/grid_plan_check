@@ -14,10 +14,10 @@ np.set_printoptions(precision=2, threshold=100)
 # Be careful to match STK orbit file and txt command file.
 
 txt_file_path = './command txt file/'
-input_name = 'tg_20210128T01h00m30s.txt'
+input_name = 'tg_20210526T14h30m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
 txt_file_name = txt_file_path + input_name
-orbit_file_path = 'orb_20210128.txt'
+orbit_file_path = 'orb_20210526.txt'
 saa_coord_file = 'coords.txt'
 saa_flux_file = 'AE8_MIN_0.1MeV.txt'
 
@@ -89,6 +89,8 @@ def orbit_recognition(txt_content):
     data_off_index = []
     # judge attitude: through attitude_command_time
     sun_tracking_mode_index = []
+
+    magnetic_sun_tracking_index = -1
     count = 0
 
     for line in txt_content:
@@ -173,7 +175,8 @@ def orbit_recognition(txt_content):
         if power_on_index[i] >= data_on_index[i] or data_on_index[i] >= data_off_index[i]:
             error += 1
         # the last data transfer: set satellite to magnetic_sun_tracking mode
-        if magnetic_sun_tracking_index in range(data_on_index[-1], data_off_index[-1]):
+        if magnetic_sun_tracking_index in range(data_on_index[-1],
+                                                data_off_index[-1]) or magnetic_sun_tracking_index == -1:
             pass
         else:
             error += 1
@@ -298,8 +301,8 @@ def find_orbit_time_index(orb_time, power_on_time, data_on_time):
             first_power_on_index = j
             break
 
-    #print(j)
-    #print(power_on_time_index)
+    # print(j)
+    # print(power_on_time_index)
     return power_on_time_index, data_on_time_index, first_power_on_index
 
 
@@ -543,9 +546,9 @@ def hex_command_check(txt_file_name):
             pass
         elif txt_contents[i][2].startswith('upload_quaternion'):
             q = txt_contents[i][2].split(" ")[1:]
-            qhex1 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
-            qhex2 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
-            qhex3 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
+            qhex1 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
+            qhex2 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
+            qhex3 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
             if abs(float(q[0]) - qhex1) >= 2E-6:
                 error_index = i + 1
                 break
