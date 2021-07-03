@@ -14,10 +14,10 @@ np.set_printoptions(precision=2, threshold=100)
 # Be careful to match STK orbit file and txt command file.
 
 txt_file_path =
-input_name =
+input_name = 'tg_20210526T14h30m30s.txt'
 # tg_20210119T15h00m30s.txt tg_20210120T01h00m30s.txt tg_20210128T01h00m30s.txt(use for test)
 txt_file_name = txt_file_path + input_name
-orbit_file_path =
+orbit_file_path = 'orb_20210526.txt'
 saa_coord_file = 'coords.txt'
 saa_flux_file = 'AE8_MIN_0.1MeV.txt'
 
@@ -90,13 +90,20 @@ def orbit_recognition(txt_content):
     # judge attitude: through attitude_command_time
     sun_tracking_mode_index = []
 
+    magnetic_sun_tracking_index = -1
+    count = 0
+
     for line in txt_content:
         # the first start in a day will use PowerOnM, to examine some electronic status
+
         if line[2] == 'load_bin_file tg_PowerOnM.bin' or line[2] == 'load_bin_file tg_PowerOn.bin':
-            if line[2] == 'load_bin_file tg_PowerOnM.bin':
-                PowerOnM = True
-            else:
-                PowerOnM = False
+            count += 1
+            if count == 1:
+                if line[2] == 'load_bin_file tg_PowerOnM.bin':
+                    PowerOnM = True
+                else:
+                    PowerOnM = False
+
             power_on_time.append(line[1])
             power_on_index.append(txt_content.index(line))
         if line[2] == 'load_bin_file tg_TXDataOn.bin':
@@ -129,11 +136,14 @@ def orbit_recognition(txt_content):
         if line[2] == 'start_sun_tracking_mode':
             sun_tracking_mode_index.append(txt_content.index(line))
 
+    first_attitude_index = len(txt_content)
     for i in range(len(txt_content)):
         if 'upload_quaternion' in txt_content[i][2]:
             first_attitude_index = i
             break
-
+    # print(first_attitude_index)
+    # print(power_on_index[0])
+    # print(PowerOnM)
     if first_attitude_index < power_on_index[0]:  # first orbit has attitude command
         if (Time(power_on_time[0], format='iso').unix - Time(txt_content[first_attitude_index + 2][1],
                                                              format='iso').unix == 8 * 60 and PowerOnM == False) \
@@ -165,7 +175,8 @@ def orbit_recognition(txt_content):
         if power_on_index[i] >= data_on_index[i] or data_on_index[i] >= data_off_index[i]:
             error += 1
         # the last data transfer: set satellite to magnetic_sun_tracking mode
-        if magnetic_sun_tracking_index in range(data_on_index[-1], data_off_index[-1]):
+        if magnetic_sun_tracking_index in range(data_on_index[-1],
+                                                data_off_index[-1]) or magnetic_sun_tracking_index == -1:
             pass
         else:
             error += 1
@@ -180,7 +191,7 @@ def orbit_recognition(txt_content):
     else:
         print('command sequence: True')
 
-    return power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time
+    return power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time, PowerOnM
 
 
 # check time interval between two commands: 1min between on and off; power on 8min after attitude setting.
@@ -284,21 +295,28 @@ def find_orbit_time_index(orb_time, power_on_time, data_on_time):
                 data_on_time_index.append(j)
                 break
 
+    first_power_on_index = 0
     for j in range(orbit_time_len):
         if power_on_time[0].unix - 5 * 60 <= orb_time[j].unix:
             first_power_on_index = j
+            break
+
+    # print(j)
+    # print(power_on_time_index)
     return power_on_time_index, data_on_time_index, first_power_on_index
 
 
-def SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index):
+def SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index, PowerOnM):
     total_orbit_number = len(power_on_time_index)
     for i in range(total_orbit_number):
         for j in range(power_on_time_index[i], data_on_time_index[i]):
             if orb_log_flux[j] >= 1.0:
                 return False
-    for i in range(first_power_on_index, power_on_time_index[0]):
-        if orb_log_flux[i] >= 1.0:
-            return False
+    if PowerOnM == True:
+        for i in range(first_power_on_index, power_on_time_index[0]):
+            if orb_log_flux[i] >= 1.0:
+                return False
+
     return True
 
 
@@ -528,9 +546,9 @@ def hex_command_check(txt_file_name):
             pass
         elif txt_contents[i][2].startswith('upload_quaternion'):
             q = txt_contents[i][2].split(" ")[1:]
-            qhex1 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
-            qhex2 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
-            qhex3 = struct.unpack('>f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
+            qhex1 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-32:-24]))[0]
+            qhex2 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-24:-16]))[0]
+            qhex3 = struct.unpack('<f', bytes.fromhex(txt_contents[i][3][-16:-8]))[0]
             if abs(float(q[0]) - qhex1) >= 2E-6:
                 error_index = i + 1
                 break
@@ -581,7 +599,8 @@ print('structure: ', structure_bool)
 print('checking orbit time sequence...')
 # print(orbit_recognition(txt_contents))
 
-power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time = orbit_recognition(txt_contents)
+power_on_time, data_on_time, data_off_time, attitude_quaternion, attitude_command_time, PowerOnM_bool = orbit_recognition(
+    txt_contents)
 # print(len(power_on_time), np.shape(attitude_quaternion), len(data_on_time))
 # print(attitude_command_time)
 time_sequence_bool = time_interval_check(power_on_time, data_off_time, attitude_command_time)
@@ -608,7 +627,8 @@ orb_log_flux = interpolate.griddata(points, np.log10(flux), (orb_lon, orb_lat), 
 power_on_time_index, data_on_time_index, first_power_on_index = find_orbit_time_index(orb_time_bj, power_on_time,
                                                                                       data_on_time)
 print('checking orbit flux...')
-print('flux check: ', SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index))
+print('flux check: ',
+      SAA_check(power_on_time_index, data_on_time_index, orb_log_flux, first_power_on_index, PowerOnM_bool))
 
 # calculate detector pointing: -z rotate by quaternion
 # NOTE: after 'upload_quaternion' there are three numbers, which are the 2, 3, 4th parameter of Quaternion(). The first parameter is Sqrt[1-a^2-b^2-c^2].
